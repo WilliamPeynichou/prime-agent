@@ -239,10 +239,32 @@ pub fn kernel_provisioner(
     on_unavailable_skills: Option<crate::kernel::provisioner::UnavailableSkillsCallback>,
     on_bootstrap_result: Option<crate::kernel::provisioner::KernelBootstrapResultHandler>,
 ) -> Arc<KernelProvisioner> {
-    let mut env = HashMap::with_capacity(1);
+    let mut env = HashMap::with_capacity(4);
     env.insert(
         "PRIME_AGENT_CODING_AGENT_DIR".to_string(),
         agent_dir.to_string_lossy().to_string(),
+    );
+    env.insert(
+        "RLM_GLOBAL_HARNESS_STATE_DIR".to_string(),
+        crate::refinement::get_global_harness_state_dir(agent_dir)
+            .to_string_lossy()
+            .to_string(),
+    );
+    // The artifact dir is shared with the digest and namespace snapshot.
+    // Empty values keep ephemeral sessions from inheriting another session's
+    // local store; the runtime treats them as unconfigured.
+    env.insert(
+        "RLM_SESSION_DIR".to_string(),
+        snapshot_dir
+            .as_ref()
+            .map(|dir| dir.to_string_lossy().to_string())
+            .unwrap_or_default(),
+    );
+    env.insert(
+        "RLM_HARNESS_STATE_DIR".to_string(),
+        crate::refinement::get_local_harness_state_dir(snapshot_dir.as_deref())
+            .map(|dir| dir.to_string_lossy().to_string())
+            .unwrap_or_default(),
     );
     Arc::new(KernelProvisioner::new(
         cwd,
